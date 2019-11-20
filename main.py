@@ -16,7 +16,10 @@ def cli():
 
 @click.command(help="Runs dmenujira")
 @click.option('--debug/--no-debug', default=False)
-def show(debug=False):
+@click.option('-u','--user',
+              help='only show issues that are assigned to given username',
+              default=None)
+def show(debug, user):
     r = Rofi()
     config = configparser.ConfigParser()
     config.read(expanduser('~/.dmenujira'))
@@ -26,12 +29,14 @@ def show(debug=False):
                                  config['JIRA']['password']))
 
     project_query = 'project=' + config['JIRA']['project']
+    if user:
+        project_query += " and assignee = " + user
     issues = auth_jira.search_issues(project_query)
 
     rofi_list = []
     for issue in issues:
         rofi_list.append(issue.key + ':' + issue.fields.summary)
-    index, key = r.select('What Issue?', rofi_list, rofi_args=['-i'])
+    index, key = r.select('What Issue?', rofi_list, rofi_args=['-i'], width=100)
     if index < 0:
         exit(1)
     ticket_number = rofi_list[index].split(":")[0]

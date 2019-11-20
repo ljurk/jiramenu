@@ -1,3 +1,4 @@
 jira==2.0.0
 python-rofi==1.0.1
 requests==2.22.0
+Click==7.0

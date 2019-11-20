@@ -21,7 +21,9 @@ def show(debug=False):
     config = configparser.ConfigParser()
     config.read(expanduser('~/.dmenujira'))
 
-    auth_jira = JIRA(config['JIRA']['url'], basic_auth=(config['JIRA']['user'], config['JIRA']['password']))
+    auth_jira = JIRA(config['JIRA']['url'],
+                     basic_auth=(config['JIRA']['user'],
+                                 config['JIRA']['password']))
 
     project_query = 'project=' + config['JIRA']['project']
     issues = auth_jira.search_issues(project_query)
@@ -35,7 +37,10 @@ def show(debug=False):
     ticket_number = rofi_list[index].split(":")[0]
 
     uri = auth_jira.issue(ticket_number).permalink()
-    Popen(['nohup', config['JIRA']['browser'], uri], stdout=DEVNULL, stderr=DEVNULL)
+    Popen(['nohup',
+          config['JIRA']['browser'], uri],
+          stdout=DEVNULL,
+          stderr=DEVNULL)
 
 
 @cli.command(help="creates sample config file")
@@ -46,8 +51,9 @@ def show(debug=False):
 def copy_config(dest):
     if os.path.exists(dest):
         raise click.UsageError("Config already exists in {}".format(dest))
-    if not os.path.exists(os.path.dirname(dest)):
-        raise click.UsageError("Directory doesn't exist: {}".format(os.path.dirname(dest)))
+    dest_dir = os.path.dirname(dest)
+    if not os.path.exists(dest_dir):
+        raise click.UsageError("Directory doesn't exist: {}".format(dest_dir))
 
     click.echo("Creating config in {}".format(dest))
     shutil.copy("./dmenujira.conf", dest)

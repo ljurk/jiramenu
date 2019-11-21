@@ -4,6 +4,7 @@ from os.path import expanduser
 import os
 import shutil
 import configparser
+import re
 import click
 from jira import JIRA
 from rofi import Rofi
@@ -24,30 +25,39 @@ class dmenujira():
                                      config['JIRA']['password']))
         self.debug = debug
 
+    def log(self, text):
+        if not self.debug:
+            return
+        print(text)
+
     def show(self, user):
         self.user = user
-        if self.debug:
-            print(self.user)
+        if user:
+            self.log("show issues for:" + self.user)
 
         project_query = 'project=' + self.config['JIRA']['project']
         if user:
             project_query += " and assignee = " + user
-        if self.debug:
-            print("Query: " + project_query)
+        self.log("Query: " + project_query)
         if not self.issues:
             self.issues = self.auth.search_issues(project_query)
 
         if not self.rofi_list:
             for issue in self.issues:
-                self.rofi_list.append(issue.key + ':' + issue.fields.summary)
-        index = self.r.select('What Issue?', self.rofi_list, rofi_args=['-i'], width=100)
+                assignee = ""
+                if issue.fields.assignee:
+                    assignee = issue.fields.assignee.name
+                self.rofi_list.append('[' + assignee + ']' +issue.key + ':' + issue.fields.summary)
+
+        index, key = self.r.select(project_query + '[' + str(len(self.rofi_list)) + ']', self.rofi_list, rofi_args=['-i'], width=100)
         if index < 0:
             exit(1)
         self.show_details(index, user)
 
 
     def show_details(self, index, user):
-        ticket_number = self.rofi_list[index].split(":")[0]
+        ticket_number = re.sub(r"\[.*\]", "", self.rofi_list[index])
+        ticket_number = ticket_number.split(":")[0]
         issue_description = self.issues[index].fields.description
         output = []
         output.append(">>show in browser")
@@ -57,15 +67,14 @@ class dmenujira():
             output.append(">>comments")
             comment_ids = self.auth.comments(ticket_number)
             for comment_id in comment_ids:
-                if self.debug:
-                    print("comment_id: " + str(comment_id))
+                self.log("comment_id: " + str(comment_id))
                 output.append(self.auth.comment(ticket_number, comment_id).body)
         else:
             output.append("no comments")
 
         output.append(">>in review")
         output.append('<<back')
-        index, key= self.r.select(ticket_number, output, width=100)
+        index, key = self.r.select(ticket_number, output, width=100)
         if index in [-1, len(output) - 1]:
             self.show(user)
 

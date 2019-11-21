@@ -87,12 +87,15 @@ class dmenujira():
                 output.append(commenttext)
         else:
             output.append("[[no comments]]")
-        print(self.auth.transitions(ticket_number))
         output.append(">>add comment")
-        print(self.issues[index].fields.status.id)
+        if self.issues[index].fields.assignee:
+            output.append("[[assignee]]"+ self.issues[index].fields.assignee.name)
+        else:
+            output.append(">>assign to me")
+
         if self.issues[index].fields.status.id == str(3):  #Work in Progress
             output.append(">>in review")
-        if self.issues[index].fields.status.id == str(5):  #Selected for development
+        else:
             output.append(">>start progress")
 
 
@@ -104,16 +107,28 @@ class dmenujira():
 
         if index == len(output) - 2:  # move issue to 'In Review'
             if self.issues[inputIndex].fields.status.id == str(3):  #Work in Progress
-                #self.auth.transition_issue(ticket_number, '721')  # 721 is the id of 'In Review'
-                print("move to in review")
+                for trans in self.auth.transitions(ticket_number):
+                    if trans['name'] == "in Review":
+                        self.log("move to 'in Review'")
+                        self.auth.transition_issue(ticket_number, trans['id'])
 
-            if self.issues[inputIndex].fields.status.id == str(5):  #Selected for development
-                print("move to in progress")
+            else:
+                for trans in self.auth.transitions(ticket_number):
+                    if trans['name'] == "Start Progress":
+                        self.log("move to 'Start Progress'")
+                        self.auth.transition_issue(ticket_number, trans['id'])
             return
 
-        if index == len(output) - 3:  #add comment
+        if index == len(output) - 4:  #add comment
             self.addComment(ticket_number)
             self.show_details(inputIndex, user)
+
+        if index == len(output) - 3:  #assign to me
+            self.auth.assign_issue(ticket_number, self.config['JIRA']['user'])
+            self.show_details(inputIndex, user)
+
+
+
         # show in browser
         uri = self.auth.issue(ticket_number).permalink()
         Popen(['nohup', self.config['JIRA']['browser'], uri],

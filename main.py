@@ -44,10 +44,13 @@ class dmenujira():
 
         if not self.rofi_list:
             for issue in self.issues:
-                assignee = ""
+                issuetext = ''
                 if issue.fields.assignee:
-                    assignee = issue.fields.assignee.name
-                self.rofi_list.append('[' + assignee + ']' +issue.key + ':' + issue.fields.summary)
+                    issuetext = '[' + issue.fields.assignee.name + ']'
+                if issue.fields.status.id == str(3):  #id:3 = Work in Progress
+                    issuetext += '{WIP}'
+                issuetext += issue.key + ':' + issue.fields.summary
+                self.rofi_list.append(issuetext)
 
         index, key = self.r.select(project_query + '[' + str(len(self.rofi_list)) + ']', self.rofi_list, rofi_args=['-i'], width=100)
         if index < 0:
@@ -57,18 +60,23 @@ class dmenujira():
 
     def show_details(self, index, user):
         ticket_number = re.sub(r"\[.*\]", "", self.rofi_list[index])
+        ticket_number = re.sub(r"\{.*\}", "", ticket_number)
         ticket_number = ticket_number.split(":")[0]
         issue_description = self.issues[index].fields.description
+
         output = []
         output.append(">>show in browser")
         output.append(">>description")
         output.append(issue_description)
+
         if self.auth.comments(ticket_number):
             output.append(">>comments")
             comment_ids = self.auth.comments(ticket_number)
             for comment_id in comment_ids:
                 self.log("comment_id: " + str(comment_id))
-                output.append(self.auth.comment(ticket_number, comment_id).body)
+                commenttext = '[' + self.auth.comment(ticket_number, comment_id).author.name + ']'
+                commenttext += self.auth.comment(ticket_number, comment_id).body
+                output.append(commenttext)
         else:
             output.append("no comments")
 

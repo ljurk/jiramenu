@@ -57,8 +57,13 @@ class dmenujira():
             exit(1)
         self.show_details(index, user)
 
+    def addComment(self, ticket_number):
+        comment = self.r.text_entry("Content of the comment:")
+        if comment:
+            self.auth.add_comment(ticket_number, comment)
 
     def show_details(self, index, user):
+        inputIndex = index
         ticket_number = re.sub(r"\[.*\]", "", self.rofi_list[index])
         ticket_number = re.sub(r"\{.*\}", "", ticket_number)
         ticket_number = ticket_number.split(":")[0]
@@ -66,11 +71,11 @@ class dmenujira():
 
         output = []
         output.append(">>show in browser")
-        output.append(">>description")
+        output.append("[[description]]")
         output.append(issue_description)
 
         if self.auth.comments(ticket_number):
-            output.append(">>comments")
+            output.append("[[comments]]")
             comment_ids = self.auth.comments(ticket_number)
             for comment_id in comment_ids:
                 self.log("comment_id: " + str(comment_id))
@@ -78,8 +83,9 @@ class dmenujira():
                 commenttext += self.auth.comment(ticket_number, comment_id).body
                 output.append(commenttext)
         else:
-            output.append("no comments")
+            output.append("[[no comments]]")
 
+        output.append(">>add comment")
         output.append(">>in review")
         output.append('<<back')
         index, key = self.r.select(ticket_number, output, width=100)
@@ -91,6 +97,9 @@ class dmenujira():
             self.auth.transition_issue(ticket_number, '721')  # 721 is the id of 'In Review'
             return
 
+        if index == len(output) - 3: #add comment
+            self.addComment(ticket_number)
+            self.show_details(inputIndex, user)
         # show in browser
         uri = self.auth.issue(ticket_number).permalink()
         Popen(['nohup', self.config['JIRA']['browser'], uri],

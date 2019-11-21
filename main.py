@@ -12,24 +12,28 @@ class dmenujira():
     user = None
     auth = None
     config = None
+    debug = False
     r = Rofi()
     issues = []
     rofi_list = []
-    def __init__(self, config):
+
+    def __init__(self, config, debug):
         self.config = config
         self.auth = JIRA(config['JIRA']['url'],
                          basic_auth=(config['JIRA']['user'],
                                      config['JIRA']['password']))
+        self.debug = debug
 
     def show(self, user):
         self.user = user
-        print("ok")
-        print(self.user)
+        if self.debug:
+            print(self.user)
 
         project_query = 'project=' + self.config['JIRA']['project']
         if user:
             project_query += " and assignee = " + user
-        print(project_query)
+        if self.debug:
+            print("Query: " + project_query)
         if len(self.issues) == 0:
             self.issues = self.auth.search_issues(project_query)
 
@@ -41,10 +45,8 @@ class dmenujira():
             exit(1)
         self.show_details(index, user)
 
-        #return index, rofi_list, issues
 
     def show_details(self, index, user):
-        print("ok")
         ticket_number = self.rofi_list[index].split(":")[0]
         issue_description = self.issues[index].fields.description
         output = []
@@ -55,16 +57,22 @@ class dmenujira():
             output.append(">>comments")
             comment_ids = self.auth.comments(ticket_number)
             for comment_id in comment_ids:
-                print(comment_id)
+                if self.debug:
+                    print("comment_id: " + str(comment_id))
                 output.append(self.auth.comment(ticket_number, comment_id).body)
         else:
             output.append( "no comments")
 
+        output.append(">>in review")
         output.append('<<back')
-        #output.append(issue_comments)
-        index, key= self.r.select('option', output, width=100)
+        index, key= self.r.select(ticket_number, output, width=100)
         if index in [-1, len(output) - 1]:
             self.show(user)
+
+        if index == len(output) - 2:
+            self.auth.transition_issue(ticket_number, '721')#in review
+
+
         if index == 0:  # show in browser
             uri = self.auth.issue(ticket_number).permalink()
             Popen(['nohup', self.config['JIRA']['browser'], uri],
@@ -89,7 +97,7 @@ def show(debug, user):
         print("DEBUG MODE")
     config = configparser.ConfigParser()
     config.read(expanduser('~/.dmenujira'))
-    temp = dmenujira(config)
+    temp = dmenujira(config, debug)
     temp.show(user)
 
 

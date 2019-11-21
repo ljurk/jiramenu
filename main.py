@@ -1,12 +1,12 @@
 #!/usr/bin/python3
-from jira import JIRA
-from rofi import Rofi
 from subprocess import Popen, DEVNULL
 from os.path import expanduser
 import os
 import shutil
 import configparser
 import click
+from jira import JIRA
+from rofi import Rofi
 
 class dmenujira():
     user = None
@@ -34,13 +34,13 @@ class dmenujira():
             project_query += " and assignee = " + user
         if self.debug:
             print("Query: " + project_query)
-        if len(self.issues) == 0:
+        if not self.issues:
             self.issues = self.auth.search_issues(project_query)
 
-        if len(self.rofi_list) == 0:
+        if not self.rofi_list:
             for issue in self.issues:
                 self.rofi_list.append(issue.key + ':' + issue.fields.summary)
-        index, key = self.r.select('What Issue?', self.rofi_list, rofi_args=['-i'], width=100)
+        index = self.r.select('What Issue?', self.rofi_list, rofi_args=['-i'], width=100)
         if index < 0:
             exit(1)
         self.show_details(index, user)
@@ -61,7 +61,7 @@ class dmenujira():
                     print("comment_id: " + str(comment_id))
                 output.append(self.auth.comment(ticket_number, comment_id).body)
         else:
-            output.append( "no comments")
+            output.append("no comments")
 
         output.append(">>in review")
         output.append('<<back')
@@ -69,17 +69,14 @@ class dmenujira():
         if index in [-1, len(output) - 1]:
             self.show(user)
 
-        if index == len(output) - 2:
-            self.auth.transition_issue(ticket_number, '721')#in review
-
+        if index == len(output) - 2:  # move issue to 'In Review'
+            self.auth.transition_issue(ticket_number, '721')  # 721 is the id of 'In Review'
 
         if index == 0:  # show in browser
             uri = self.auth.issue(ticket_number).permalink()
             Popen(['nohup', self.config['JIRA']['browser'], uri],
                   stdout=DEVNULL,
                   stderr=DEVNULL)
-
-
 
 
 @click.group()
@@ -89,7 +86,7 @@ def cli():
 
 @click.command(help="Runs dmenujira")
 @click.option('--debug/--no-debug', default=False)
-@click.option('-u','--user',
+@click.option('-u', '--user',
               help='only show issues that are assigned to given username',
               default=None)
 def show(debug, user):
@@ -99,7 +96,6 @@ def show(debug, user):
     config.read(expanduser('~/.dmenujira'))
     temp = dmenujira(config, debug)
     temp.show(user)
-
 
 
 @cli.command(help="creates sample config file")

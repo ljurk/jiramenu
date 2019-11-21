@@ -85,15 +85,17 @@ class dmenujira():
         index, key = self.r.select(ticket_number, output, width=100)
         if index in [-1, len(output) - 1]:
             self.show(user)
+            return
 
         if index == len(output) - 2:  # move issue to 'In Review'
             self.auth.transition_issue(ticket_number, '721')  # 721 is the id of 'In Review'
+            return
 
-        if index == 0:  # show in browser
-            uri = self.auth.issue(ticket_number).permalink()
-            Popen(['nohup', self.config['JIRA']['browser'], uri],
-                  stdout=DEVNULL,
-                  stderr=DEVNULL)
+        # show in browser
+        uri = self.auth.issue(ticket_number).permalink()
+        Popen(['nohup', self.config['JIRA']['browser'], uri],
+              stdout=DEVNULL,
+              stderr=DEVNULL)
 
 
 @click.group()

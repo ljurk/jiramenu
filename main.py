@@ -44,6 +44,10 @@ class dmenujira():
             self.issues = self.auth.search_issues(project_query)
 
         if not self.rofi_list:
+            if user:
+                self.rofi_list.append(">>ALL")
+            else:
+                self.rofi_list.append(">>MINE")
             for issue in self.issues:
                 issuetext = ''
                 if issue.fields.assignee:
@@ -56,6 +60,14 @@ class dmenujira():
         index, key = self.r.select(project_query + '[' + str(len(self.rofi_list)) + ']', self.rofi_list, rofi_args=['-i'], width=100)
         if index < 0:
             exit(1)
+        if index == 0:
+            self.issues = []
+            self.rofi_list = []
+            if user:
+                self.show(None)
+            else:
+                self.show(self.config['JIRA']['user'])
+            return
         self.show_details(index, user)
 
     def addComment(self, ticket_number):

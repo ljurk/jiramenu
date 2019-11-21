@@ -35,7 +35,8 @@ class dmenujira():
         if user:
             self.log("show issues for:" + self.user)
 
-        project_query = 'project=' + self.config['JIRA']['project']
+        project_query = 'status not in ("closed", "Gelöst")'
+        project_query += 'and project=' + self.config['JIRA']['project']
         if user:
             project_query += " and assignee = " + user
         self.log("Query: " + project_query)
@@ -71,6 +72,8 @@ class dmenujira():
 
         output = []
         output.append(">>show in browser")
+        output.append("[[status]]")
+        output.append(self.issues[index].fields.status.name)
         output.append("[[description]]")
         output.append(issue_description)
 
@@ -84,9 +87,15 @@ class dmenujira():
                 output.append(commenttext)
         else:
             output.append("[[no comments]]")
-
+        print(self.auth.transitions(ticket_number))
         output.append(">>add comment")
-        output.append(">>in review")
+        print(self.issues[index].fields.status.id)
+        if self.issues[index].fields.status.id == str(3):  #Work in Progress
+            output.append(">>in review")
+        if self.issues[index].fields.status.id == str(5):  #Selected for development
+            output.append(">>start progress")
+
+
         output.append('<<back')
         index, key = self.r.select(ticket_number, output, width=100)
         if index in [-1, len(output) - 1]:
@@ -94,10 +103,15 @@ class dmenujira():
             return
 
         if index == len(output) - 2:  # move issue to 'In Review'
-            self.auth.transition_issue(ticket_number, '721')  # 721 is the id of 'In Review'
+            if self.issues[inputIndex].fields.status.id == str(3):  #Work in Progress
+                #self.auth.transition_issue(ticket_number, '721')  # 721 is the id of 'In Review'
+                print("move to in review")
+
+            if self.issues[inputIndex].fields.status.id == str(5):  #Selected for development
+                print("move to in progress")
             return
 
-        if index == len(output) - 3: #add comment
+        if index == len(output) - 3:  #add comment
             self.addComment(ticket_number)
             self.show_details(inputIndex, user)
         # show in browser

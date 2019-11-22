@@ -80,6 +80,7 @@ class dmenujira():
         ticket_number = re.sub(r"\[.*\]", "", self.rofi_list[index])
         ticket_number = re.sub(r"\{.*\}", "", ticket_number)
         ticket_number = ticket_number.split(":")[0]
+        self.log("[details]" + ticket_number)
         issue_description = self.issues[index - 1].fields.description
 
         output = []
@@ -135,14 +136,17 @@ class dmenujira():
             return
 
         if index == len(output) - 4:  # add comment
+            self.log("[addComment]")
             self.addComment(ticket_number)
             self.show_details(inputIndex, user)
 
         if index == len(output) - 3:  # assign to me
+            self.log("[assign to me]")
             self.auth.assign_issue(ticket_number, self.config['JIRA']['user'])
             self.show_details(inputIndex, user)
 
         # show in browser
+        self.log("[show in browser]")
         uri = self.auth.issue(ticket_number).permalink()
         Popen(['nohup', self.config['JIRA']['browser'], uri],
               stdout=DEVNULL,

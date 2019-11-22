@@ -80,12 +80,12 @@ class dmenujira():
         ticket_number = re.sub(r"\[.*\]", "", self.rofi_list[index])
         ticket_number = re.sub(r"\{.*\}", "", ticket_number)
         ticket_number = ticket_number.split(":")[0]
-        issue_description = self.issues[index].fields.description
+        issue_description = self.issues[index - 1].fields.description
 
         output = []
         output.append(">>show in browser")
         output.append("[[status]]")
-        output.append(self.issues[index].fields.status.name)
+        output.append(self.issues[index - 1].fields.status.name)
         output.append("[[description]]")
         output.append(issue_description)
 
@@ -100,16 +100,16 @@ class dmenujira():
         else:
             output.append("[[no comments]]")
         output.append(">>add comment")
-        if self.issues[index].fields.assignee:
-            output.append("[[assignee]]"+ self.issues[index].fields.assignee.name)
+        if self.issues[index - 1].fields.assignee:
+            output.append("[[assignee]]" +
+                          self.issues[index - 1].fields.assignee.name)
         else:
             output.append(">>assign to me")
 
-        if self.issues[index].fields.status.id == str(3):  #Work in Progress
+        if self.issues[index - 1].fields.status.id == str(3):  # WIP
             output.append(">>in review")
         else:
             output.append(">>start progress")
-
 
         output.append('<<back')
         index, key = self.r.select(ticket_number, output, width=100)
@@ -118,7 +118,7 @@ class dmenujira():
             return
 
         if index == len(output) - 2:  # move issue to 'In Review'
-            if self.issues[inputIndex].fields.status.id == str(3):  #Work in Progress
+            if self.issues[inputIndex].fields.status.id == str(3):  # WIP
                 for trans in self.auth.transitions(ticket_number):
                     if trans['name'] == "in Review":
                         self.log("move to 'in Review'")
@@ -131,15 +131,13 @@ class dmenujira():
                         self.auth.transition_issue(ticket_number, trans['id'])
             return
 
-        if index == len(output) - 4:  #add comment
+        if index == len(output) - 4:  # add comment
             self.addComment(ticket_number)
             self.show_details(inputIndex, user)
 
-        if index == len(output) - 3:  #assign to me
+        if index == len(output) - 3:  # assign to me
             self.auth.assign_issue(ticket_number, self.config['JIRA']['user'])
             self.show_details(inputIndex, user)
-
-
 
         # show in browser
         uri = self.auth.issue(ticket_number).permalink()

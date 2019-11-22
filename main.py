@@ -141,11 +141,18 @@ class dmenujira():
             self.log("[addComment]")
             self.addComment(ticket_number)
             self.show_details(inputIndex, user)
+            return
 
         if index == len(output) - 3:  # assign to me
             self.log("[assign to me]")
             self.auth.assign_issue(ticket_number, self.config['JIRA']['user'])
             self.show_details(inputIndex, user)
+            return
+
+        if index in [3, 4]:
+            Popen(['notify-send', issue_description, '-t', '30000'])
+            self.show_details(inputIndex, user)
+            return
 
         # show in browser
         self.log("[show in browser]")

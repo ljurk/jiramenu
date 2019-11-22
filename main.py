@@ -118,7 +118,9 @@ class dmenujira():
             return
 
         if index == len(output) - 2:  # move issue to 'In Review'
-            if self.issues[inputIndex].fields.status.id == str(3):  # WIP
+            self.log("[status]"+self.issues[inputIndex - 1].fields.status.name)
+            self.log("[transitions]" + self.auth.transitions(ticket_number))
+            if self.issues[inputIndex - 1].fields.status.id == str(3):  # WIP
                 for trans in self.auth.transitions(ticket_number):
                     if trans['name'] == "in Review":
                         self.log("move to 'in Review'")
@@ -129,6 +131,7 @@ class dmenujira():
                     if trans['name'] == "Start Progress":
                         self.log("move to 'Start Progress'")
                         self.auth.transition_issue(ticket_number, trans['id'])
+            self.show_details(inputIndex, user)
             return
 
         if index == len(output) - 4:  # add comment

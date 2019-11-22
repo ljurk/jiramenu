@@ -73,6 +73,8 @@ class dmenujira():
     def addComment(self, ticket_number):
         comment = self.r.text_entry("Content of the comment:")
         if comment:
+            # replace @user with [~user]
+            comment = re.sub(r"@(\w+)", r"[~\1]", comment)
             self.auth.add_comment(ticket_number, comment)
 
     def show_details(self, index, user):

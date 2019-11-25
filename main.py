@@ -122,7 +122,8 @@ class dmenujira():
 
         if index == len(output) - 2:  # move issue to 'In Review'
             self.log("[status]"+self.issues[inputIndex - 1].fields.status.name)
-            self.log("[transitions]" + self.auth.transitions(ticket_number))
+            self.log("[transitions]")
+            self.log(self.auth.transitions(ticket_number))
             if self.issues[inputIndex - 1].fields.status.id == str(3):  # WIP
                 for trans in self.auth.transitions(ticket_number):
                     if trans['name'] == "in Review":

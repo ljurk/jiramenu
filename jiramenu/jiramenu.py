@@ -174,11 +174,14 @@ def cli():
 @click.option('-u', '--user',
               help='only show issues that are assigned to given username',
               default=None)
-def show(debug, user):
+@click.option('-c', '--config',
+              default='~/.jiramenu',
+              type=click.Path(exists=True))
+def show(debug, user, config):
     if debug:
         print("DEBUG MODE")
     config = configparser.ConfigParser()
-    config.read(expanduser('~/.jiramenu'))
+    config.read(expanduser(config))
     temp = jiramenu(config, debug)
     temp.show(user)
 

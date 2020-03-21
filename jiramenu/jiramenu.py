@@ -9,7 +9,7 @@ import click
 from jira import JIRA
 from rofi import Rofi
 
-class dmenujira():
+class jiramenu():
     user = None
     auth = None
     config = None
@@ -20,6 +20,7 @@ class dmenujira():
 
     def __init__(self, config, debug):
         self.config = config
+        self.r.status("starting jiramenu")
         self.auth = JIRA(config['JIRA']['url'],
                          basic_auth=(config['JIRA']['user'],
                                      config['JIRA']['password']))
@@ -168,7 +169,7 @@ def cli():
     pass
 
 
-@click.command(help="Runs dmenujira")
+@click.command(help="Runs jiramenu")
 @click.option('--debug/--no-debug', default=False)
 @click.option('-u', '--user',
               help='only show issues that are assigned to given username',
@@ -177,8 +178,8 @@ def show(debug, user):
     if debug:
         print("DEBUG MODE")
     config = configparser.ConfigParser()
-    config.read(expanduser('~/.dmenujira'))
-    temp = dmenujira(config, debug)
+    config.read(expanduser('~/.jiramenu'))
+    temp = jiramenu(config, debug)
     temp.show(user)
 
 
@@ -186,7 +187,7 @@ def show(debug, user):
 @click.option("-d", "--dest",
               required=False,
               type=click.Path(),
-              default=expanduser("~/.dmenujira"))
+              default=expanduser("~/.jiramenu"))
 def copy_config(dest):
     if os.path.exists(dest):
         raise click.UsageError("Config already exists in {}".format(dest))
@@ -195,7 +196,7 @@ def copy_config(dest):
         raise click.UsageError("Directory doesn't exist: {}".format(dest_dir))
 
     click.echo("Creating config in {}".format(dest))
-    shutil.copy("./dmenujira.conf", dest)
+    shutil.copy("./jiramenu.conf", dest)
 
 
 cli.add_command(show)

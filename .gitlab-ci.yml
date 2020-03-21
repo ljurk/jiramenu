@@ -1,0 +1,17 @@
+---
+image: python:3.7-alpine
+
+stages:
+  - deploy
+
+before_script:
+  - pip install twine
+  - python setup.py sdist
+
+deploy:
+  stage: deploy
+  variables:
+    TWINE_USERNAME: "__token__"
+    TWINE_PASSWORD: $TOKEN
+  script:
+    - twine upload dist/* --verbose

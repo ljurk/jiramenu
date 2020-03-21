@@ -36,8 +36,7 @@ class jiramenu():
         if user:
             self.log("show issues for:" + self.user)
 
-        project_query = 'status not in ("closed", "Gelöst")'
-        project_query += 'and project=' + self.config['JIRA']['project']
+        project_query = self.config['JIRA']['query']
         if user:
             project_query += " and assignee = " + user
         self.log("Query: " + project_query)
@@ -52,13 +51,18 @@ class jiramenu():
             for issue in self.issues:
                 issuetext = ''
                 if issue.fields.assignee:
-                    issuetext = '[' + issue.fields.assignee.name + ']'
+                    issuetext = f'[{issue.fields.assignee.name}]'
                 if issue.fields.status.id == str(3):  #id:3 = Work in Progress
                     issuetext += '{WIP}'
-                issuetext += issue.key + ':' + issue.fields.summary
+                issuetext += f'{issue.key}:{issue.fields.summary}'
                 self.rofi_list.append(issuetext)
 
-        index, key = self.r.select(project_query + '[' + str(len(self.rofi_list)) + ']', self.rofi_list, rofi_args=['-i'], width=100)
+        # print active query plus number of results on top
+        index, key = self.r.select(f'{project_query}[{len(self.rofi_list)}]',
+                                   self.rofi_list,
+                                   rofi_args=['-i'],
+                                   width=100)
+        del key
         if index < 0:
             exit(1)
         if index == 0:

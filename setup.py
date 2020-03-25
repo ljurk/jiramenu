@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='jiramenu',
-    version='1.0.7',
+    version='1.0.8',
     packages=['jiramenu'],
     author="Lukas Jurk",
     author_email="ljurk@pm.me",

@@ -212,7 +212,11 @@ def show(debug, user, config):
               type=click.STRING,
               prompt=True)
 @click.password_option(help='the password will be saved inside default gnome-keyring')
-def configure(dest, url, project, user, password):
+@click.option('--query',
+              type=click.STRING,
+              prompt=True,
+              default="status not in ('closed', 'Gelöst')")
+def configure(dest, url, project, user, password, query):
     if not os.path.exists(os.path.dirname(dest)):
         os.mkdir(os.path.dirname(dest))
 
@@ -223,6 +227,7 @@ def configure(dest, url, project, user, password):
     conf.set(section, 'url', str(url))
     conf.set(section, 'project', project)
     conf.set(section, 'user', user)
+    conf.set(section, 'query', query)
     #save password to keyring
     keyring.set_password('jiramenu', user, password)
     click.echo("Creating config in {}".format(dest))

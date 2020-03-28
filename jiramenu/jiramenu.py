@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 from subprocess import Popen, DEVNULL
 from os.path import expanduser
 import os
@@ -36,14 +35,14 @@ class jiramenu():
     def show(self, user):
         self.user = user
         if user:
-            self.log("show issues for:" + self.user)
+            self.log(f"show issues for: {self.user}")
 
-        project_query = self.config['JIRA']['query']
+        query = self.config['JIRA']['query']
         if user:
-            project_query += " and assignee = " + user
-        self.log("Query: " + project_query)
+            query += f" and assignee = {user}"
+        self.log(f"Query: {query}")
         if not self.issues:
-            self.issues = self.auth.search_issues(project_query)
+            self.issues = self.auth.search_issues(query)
 
         if not self.rofi_list:
             if user:
@@ -60,7 +59,7 @@ class jiramenu():
                 self.rofi_list.append(issuetext)
 
         # print active query plus number of results on top
-        index, key = self.r.select(f'{project_query}[{len(self.rofi_list)}]',
+        index, key = self.r.select(f'{query}[{len(self.rofi_list)}]',
                                    self.rofi_list,
                                    rofi_args=['-i'],
                                    width=100)

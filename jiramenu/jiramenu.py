@@ -22,9 +22,12 @@ class jiramenu():
     def __init__(self, config, debug):
         self.config = config
         self.r.status("starting jiramenu")
-        self.auth = JIRA(config['JIRA']['url'],
-                         basic_auth=(config['JIRA']['user'],
-                                     config['JIRA']['password']))
+        try:
+            self.auth = JIRA(config['JIRA']['url'],
+                             basic_auth=(config['JIRA']['user'],
+                                         config['JIRA']['password']))
+        except Exception as error:
+            self.r.exit_with_error(str(error))
         self.debug = debug
 
     def log(self, text):

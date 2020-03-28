@@ -2,12 +2,14 @@
 from subprocess import Popen, DEVNULL
 from os.path import expanduser
 import os
-import shutil
 import configparser
 import re
+import keyring
 import click
 from jira import JIRA
 from rofi import Rofi
+
+section = 'JIRA'
 
 class jiramenu():
     user = None
@@ -180,35 +182,57 @@ def cli():
               help='only show issues that are assigned to given username',
               default=None)
 @click.option('-c', '--config',
-              default=expanduser('~/.jiramenu'),
+              default=expanduser('~/.config/jiramenu/config'),
               type=click.Path(exists=True))
 def show(debug, user, config):
     if debug:
         print("DEBUG MODE")
     conf = configparser.ConfigParser()
     conf.read(config)
+
+    #get password from keyring
+    conf.set(section, 'password', keyring.get_password('jiramenu', conf[section]['user']))
+
     temp = jiramenu(conf, debug)
     temp.show(user)
 
 
-@cli.command(help="creates sample config file")
+@cli.command(help="creates config file")
 @click.option("-d", "--dest",
-              required=False,
+              required=True,
               type=click.Path(),
-              default=expanduser("~/.jiramenu"))
-def copy_config(dest):
-    if os.path.exists(dest):
-        raise click.UsageError("Config already exists in {}".format(dest))
-    dest_dir = os.path.dirname(dest)
-    if not os.path.exists(dest_dir):
-        raise click.UsageError("Directory doesn't exist: {}".format(dest_dir))
+              default=expanduser('~/.config/jiramenu/config'))
+@click.option('--url',
+              type=click.STRING,
+              prompt=True)
+@click.option('--project',
+              type=click.STRING,
+              prompt=True)
+@click.option('--user',
+              type=click.STRING,
+              prompt=True)
+@click.password_option(help='the password will be saved inside default gnome-keyring')
+def configure(dest, url, project, user, password):
+    if not os.path.exists(os.path.dirname(dest)):
+        os.mkdir(os.path.dirname(dest))
 
+    conf = configparser.ConfigParser()
+    print(url)
+    print(type(url))
+    conf.add_section(section)
+    conf.set(section, 'url', str(url))
+    conf.set(section, 'project', project)
+    conf.set(section, 'user', user)
+    #save password to keyring
+    keyring.set_password('jiramenu', user, password)
     click.echo("Creating config in {}".format(dest))
-    shutil.copy("./jiramenu.conf", dest)
+    #write to config file
+    with open(dest, 'w') as filestream:
+        conf.write(filestream)
 
 
 cli.add_command(show)
-cli.add_command(copy_config)
+cli.add_command(configure)
 
 if __name__ == '__main__':
     cli()

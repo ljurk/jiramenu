@@ -19,7 +19,8 @@ setup(
         "jira",
         "python-rofi",
         "requests",
-        "Click"
+        "Click",
+        "keyring"
     ],
     classifiers=[
         "Programming Language :: Python :: 2",

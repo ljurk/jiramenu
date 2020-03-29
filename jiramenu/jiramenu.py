@@ -218,7 +218,11 @@ def show(debug, user, config):
               type=click.STRING,
               prompt=True,
               default="status not in ('closed', 'Gelöst')")
-def configure(dest, url, project, user, password, query):
+@click.option('--browser',
+              type=click.STRING,
+              prompt=True,
+              default="xdg-open")
+def configure(dest, url, project, user, password, query, browser):
     if not os.path.exists(os.path.dirname(dest)):
         os.mkdir(os.path.dirname(dest))
 
@@ -230,6 +234,7 @@ def configure(dest, url, project, user, password, query):
     conf.set(section, 'project', project)
     conf.set(section, 'user', user)
     conf.set(section, 'query', query)
+    conf.set(section, 'browser', browser)
     #save password to keyring
     keyring.set_password('jiramenu', user, password)
     click.echo("Creating config in {}".format(dest))

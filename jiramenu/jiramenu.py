@@ -5,6 +5,7 @@ import configparser
 import re
 import keyring
 import click
+import pyperclip
 from jira import JIRA
 from rofi import Rofi
 
@@ -12,6 +13,7 @@ section = 'JIRA'
 
 class jiramenu():
     user = None
+    project = None
     auth = None
     config = None
     debug = False
@@ -37,28 +39,49 @@ class jiramenu():
 
     def show(self, user):
         self.user = user
+        self.project = self.config['JIRA']['project']
         if user:
             self.log(f"show issues for: {self.user}")
 
         query = self.config['JIRA']['query']
         if user:
-            query += f" and assignee = {user}"
+            query += f" and assignee = '{user}'"
+        if self.project:
+            query += f" and project = '{self.project}'"
         self.log(f"Query: {query}")
         if not self.issues:
             self.issues = self.auth.search_issues(query)
+            self.boards = self.auth.boards()
 
         if not self.rofi_list:
             if user:
-                self.rofi_list.append(">>ALL")
+                self.rofi_list.append("> all")
             else:
-                self.rofi_list.append(">>MINE")
+                self.rofi_list.append("> mine")
+            self.issues.sort(key=lambda x: x.fields.status.id, reverse=False)
             for issue in self.issues:
+                labels = ''
+                if len(issue.fields.labels):
+                    labels = '('
+                    for idx, label in enumerate(issue.fields.labels):
+                        labels += label
+                        if idx != len(issue.fields.labels) -1:
+                            labels += ', '
+                    labels += ')'
                 issuetext = ''
+                issueassignee = ''
+                initials = '  '
                 if issue.fields.assignee:
-                    issuetext = f'[{issue.fields.assignee.name}]'
+                    issueassignee = issue.fields.assignee.displayName
+                    initials = ''.join([x[0].upper() for x in issueassignee.split(' ')])
                 if issue.fields.status.id == str(3):  #id:3 = Work in Progress
-                    issuetext += '{WIP}'
-                issuetext += f'{issue.key}:{issue.fields.summary}'
+                    issuetext = '{WIP}'
+                issuekey = issue.key
+                issuekey = "{:<9}".format(issuekey)
+                status = "{:<24}".format(issue.fields.status.name)
+
+                issueassignee = "{:<20}".format(issueassignee)
+                issuetext += f'{issuekey} {status} {initials}     {labels} {issue.fields.summary}'
                 self.rofi_list.append(issuetext)
 
         # print active query plus number of results on top
@@ -88,64 +111,77 @@ class jiramenu():
 
     def show_details(self, index, user):
         inputIndex = index
-        ticket_number = re.sub(r"\[.*\]", "", self.rofi_list[index])
-        ticket_number = re.sub(r"\{.*\}", "", ticket_number)
-        ticket_number = ticket_number.split(":")[0]
+        # ticket_number = re.match("IMP-([1-9]|[1-9][0-9])+", self.rofi_list[index]).group(0)
+        issue = self.issues[index-1]
+        ticket_number = issue.key
+        summary = '-'.join(issue.fields.summary.split(' '))
+        branch_name= ticket_number + '-' + summary[:33]
+
         self.log("[details]" + ticket_number)
-        issue_description = self.issues[index - 1].fields.description
+        issue_description = issue.fields.description
 
         output = []
-        output.append(">>show in browser")
-        output.append("[[status]]")
-        output.append(self.issues[index - 1].fields.status.name)
-        output.append("[[description]]")
-        output.append(issue_description)
+        output.append("> show in browser")
+        output.append("")
+        output.append(f"> copy branch ({branch_name})")
+        output.append("")
+        output.append("Status: " + self.issues[index - 1].fields.status.name)
+        # output.append("Description: " + issue_description)
+        description = []
+        if issue_description:
+            description = issue_description.split('\n')
+        for item in description:
+            output.append(item)
 
         if self.auth.comments(ticket_number):
-            output.append("[[comments]]")
             comment_ids = self.auth.comments(ticket_number)
             for comment_id in comment_ids:
                 self.log("comment_id: " + str(comment_id))
-                commenttext = '[' + self.auth.comment(ticket_number, comment_id).author.name + ']'
-                commenttext += self.auth.comment(ticket_number, comment_id).body
-                output.append(commenttext)
+                commentauthor = self.auth.comment(ticket_number, comment_id).author.displayName + ':'
+                output.append(commentauthor)
+                commenttext = self.auth.comment(ticket_number, comment_id).body
+                commenttext = commenttext.split('\n')
+                for line in commenttext:
+                    output.append(line)
         else:
-            output.append("[[no comments]]")
-        output.append(">>add comment")
+            output.append("no comments")
+        output.append("")
+        output.append("> add comment")
+        output.append("")
         if self.issues[index - 1].fields.assignee:
-            output.append("[[assignee]]" +
-                          self.issues[index - 1].fields.assignee.name)
+            output.append("assigned to: " +
+                          self.issues[index - 1].fields.assignee.displayName)
         else:
-            output.append(">>assign to me")
+            output.append("> assign to me")
 
-        if self.issues[index - 1].fields.status.id == str(3):  # WIP
-            output.append(">>in review")
-        else:
-            output.append(">>start progress")
-
-        output.append('<<back')
+        # if self.issues[index - 1].fields.status.id == str(3):  # WIP
+        #     output.append(">>in review")
+        # else:
+        #     output.append(">>start progress")
+        output.append("")
+        output.append('< back')
         index, key = self.r.select(ticket_number, output, width=100)
         if index in [-1, len(output) - 1]:
             self.show(user)
             return
 
-        if index == len(output) - 2:  # move issue to 'In Review'
-            self.log("[status]"+self.issues[inputIndex - 1].fields.status.name)
-            self.log("[transitions]")
-            self.log(self.auth.transitions(ticket_number))
-            if self.issues[inputIndex - 1].fields.status.id == str(3):  # WIP
-                for trans in self.auth.transitions(ticket_number):
-                    if trans['name'] == "in Review":
-                        self.log("move to 'in Review'")
-                        self.auth.transition_issue(ticket_number, trans['id'])
-
-            else:
-                for trans in self.auth.transitions(ticket_number):
-                    if trans['name'] == "Start Progress":
-                        self.log("move to 'Start Progress'")
-                        self.auth.transition_issue(ticket_number, trans['id'])
-            self.show_details(inputIndex, user)
-            return
+        # if index == len(output) - 2:  # move issue to 'In Review'
+        #     self.log("[status]"+self.issues[inputIndex - 1].fields.status.name)
+        #     self.log("[transitions]")
+        #     self.log(self.auth.transitions(ticket_number))
+        #     if self.issues[inputIndex - 1].fields.status.id == str(3):  # WIP
+        #         for trans in self.auth.transitions(ticket_number):
+        #             if trans['name'] == "in Review":
+        #                 self.log("move to 'in Review'")
+        #                 self.auth.transition_issue(ticket_number, trans['id'])
+        #
+        #     else:
+        #         for trans in self.auth.transitions(ticket_number):
+        #             if trans['name'] == "Start Progress":
+        #                 self.log("move to 'Start Progress'")
+        #                 self.auth.transition_issue(ticket_number, trans['id'])
+        #     self.show_details(inputIndex, user)
+        #     return
 
         if index == len(output) - 4:  # add comment
             self.log("[addComment]")
@@ -159,10 +195,14 @@ class jiramenu():
             self.show_details(inputIndex, user)
             return
 
-        if index in [3, 4]:
-            Popen(['notify-send', issue_description, '-t', '30000'])
-            self.show_details(inputIndex, user)
+        if index == 2:
+            pyperclip.copy(branch_name)
             return
+
+        # if index in [3, 4]:
+        #     Popen(['notify-send', issue_description, '-t', '30000'])
+        #     self.show_details(inputIndex, user)
+        #     return
 
         # show in browser
         self.log("[show in browser]")
